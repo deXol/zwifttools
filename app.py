@@ -9,6 +9,9 @@ Run with: python app.py
 Then open: http://localhost:5000
 """
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session, Response
 import numpy as np
 import pandas as pd
@@ -50,6 +53,12 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 
 # Use a stable secret key so sessions survive restarts and work across Gunicorn workers
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+
+# intervals.icu integration
+_INTERVALS_ATHLETE_ID = os.environ.get('INTERVALS_ATHLETE_ID')
+_INTERVALS_API_KEY = os.environ.get('INTERVALS_API_KEY')
+_INTERVALS_BASE_URL = "https://intervals.icu/api/v1"
+_INTERVALS_DEFAULT_DURATIONS = [180, 300, 600, 1200]
 
 # Global bike database
 _db = None
@@ -209,6 +218,37 @@ def bike_comparison():
 def critical_power():
     """Critical power calculator with regression plot."""
     return render_template('critical_power.html')
+
+
+@app.route('/api/intervals/efforts')
+def intervals_efforts():
+    """Fetch best power for requested durations from the intervals.icu power curve."""
+    if not _INTERVALS_ATHLETE_ID or not _INTERVALS_API_KEY:
+        return jsonify({"error": "intervals.icu credentials not configured on the server."}), 503
+    raw = request.args.get("durations", "")
+    try:
+        durations = [int(d) for d in raw.split(",") if d.strip()]
+    except ValueError:
+        return jsonify({"error": "Invalid durations parameter."}), 400
+    if not durations:
+        durations = _INTERVALS_DEFAULT_DURATIONS
+    url = f"{_INTERVALS_BASE_URL}/athlete/{_INTERVALS_ATHLETE_ID}/power-curves.json"
+    try:
+        r = requests.get(url, params={"type": "Ride"}, auth=("API_KEY", _INTERVALS_API_KEY), timeout=10)
+        r.raise_for_status()
+    except requests.RequestException as e:
+        return jsonify({"error": f"Failed to fetch from intervals.icu: {e}"}), 502
+    curve = r.json().get("list", [{}])[0]
+    secs = curve.get("secs", [])
+    watts = curve.get("watts", [])
+    efforts = []
+    for t in durations:
+        if not secs:
+            continue
+        idx = min(range(len(secs)), key=lambda i: abs(secs[i] - t))
+        efforts.append({"duration": t, "power": watts[idx]})
+    return jsonify({"efforts": efforts})
+
 
 
 @app.route('/race-replay')

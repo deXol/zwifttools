@@ -160,6 +160,30 @@ h1 {
     font-size: 0.85rem;
 }
 
+.import-bar {
+    margin-bottom: 14px;
+}
+
+.import-btn {
+    width: 100%;
+    border-color: rgba(99, 179, 237, 0.4);
+    background: rgba(99, 179, 237, 0.08);
+    color: #63b3ed;
+    font-weight: 600;
+}
+
+.import-btn:hover {
+    background: rgba(99, 179, 237, 0.18);
+    border-color: #63b3ed;
+}
+
+.import-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+
 .actions {
     margin-top: 14px;
     display: flex;

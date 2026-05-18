@@ -96,6 +96,15 @@ Standalone browser overlays for [Sauce4Zwift](https://www.sauce.llc/), installed
    - `AZURE_STORAGE_CONNECTION_STRING` — Azure Blob Storage for race data caching
    - `AZURE_STORAGE_CONTAINER` — blob container name (default: `race-cache`)
    - `ZWIFT_USERNAME` / `ZWIFT_PASSWORD` — only needed for the Azure Function (headless Zwift auth)
+   - `INTERVALS_ATHLETE_ID` — intervals.icu athlete ID (e.g. `i468105`) for the Critical Power page
+   - `INTERVALS_API_KEY` — intervals.icu API key; find it at **intervals.icu → Settings → API**
+
+   Create a `.env` file in the project root for local dev (already gitignored):
+   ```
+   INTERVALS_ATHLETE_ID=iXXXXXX
+   INTERVALS_API_KEY=your_api_key
+   ```
+   Without these, the "Import best efforts from intervals.icu" button on the Critical Power page will return an error.
 
 3. Run:
    ```bash

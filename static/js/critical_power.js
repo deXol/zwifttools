@@ -652,13 +652,69 @@ function resetForm() {
     }
 }
 
+async function importEfforts() {
+    const btn = document.getElementById("importEffortsBtn");
+    btn.disabled = true;
+    btn.textContent = "Loading…";
+    try {
+        const durations = [];
+        for (let i = 0; i < 4; i += 1) {
+            const secs = parseDurationSeconds((document.getElementById(`duration-${i}`) || {}).value);
+            if (secs) {
+                durations.push(secs);
+            }
+        }
+
+        if (durations.length === 0) {
+            setMessage("Enter at least one duration before importing.", "error");
+            return;
+        }
+
+        const res = await fetch(`/api/intervals/efforts?durations=${durations.join(",")}`);
+        const data = await res.json();
+        if (data.error) {
+            setMessage(`intervals.icu error: ${data.error}`, "error");
+            return;
+        }
+
+        const effortMap = {};
+        for (const e of data.efforts) {
+            effortMap[e.duration] = e.power;
+        }
+
+        let filled = 0;
+        for (let i = 0; i < 4; i += 1) {
+            const durationEl = document.getElementById(`duration-${i}`);
+            const powerEl = document.getElementById(`power-${i}`);
+            if (!durationEl || !powerEl) {
+                continue;
+            }
+            const secs = parseDurationSeconds(durationEl.value);
+            if (secs && effortMap[secs] !== undefined) {
+                powerEl.value = effortMap[secs];
+                filled += 1;
+            }
+        }
+
+        saveInputs();
+        calculate();
+        setMessage(`Filled ${filled} power value(s) from intervals.icu.`, "success");
+    } catch (err) {
+        setMessage(`Failed to reach intervals.icu: ${err.message}`, "error");
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "↓ Import best efforts from intervals.icu";
+    }
+}
+
+
 document.addEventListener("DOMContentLoaded", () => {
     const stored = loadStoredInputs();
     createRows(stored && Array.isArray(stored.rows) ? stored.rows : null);
     document.getElementById("calculateBtn").addEventListener("click", calculate);
     document.getElementById("resetBtn").addEventListener("click", resetForm);
-
-    bindRecalcOnCommit(document.getElementById("whatIfDuration"));
+    document.getElementById("importEffortsBtn").addEventListener("click", importEfforts);
+bindRecalcOnCommit(document.getElementById("whatIfDuration"));
     bindRecalcOnCommit(document.getElementById("whatIfPower"));
 
     if (stored) {
